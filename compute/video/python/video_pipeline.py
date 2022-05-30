@@ -721,7 +721,7 @@ if __name__ == '__main__':
                         'given by openpose, otherwise issue new frame number')
     parser.add_argument('--area_of_interest', dest='area_of_interest',
                         type=int, nargs='+', help='process bodies in certain '
-                        'area. --area_of_interest <x1> <y1> <x2> <y2>')
+                        'area. Clockwise starting at top-left --area_of_interest <x1> <y1> <x2> <y2>')
     parser.add_argument('--profile', dest='profile', action='store_true',
                         help='if set, profile performance')
     parser.add_argument('--backfillFPS',dest='backfillFPS',type=float,

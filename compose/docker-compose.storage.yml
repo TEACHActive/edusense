@@ -20,10 +20,38 @@ services:
       - app_password
   mongo:
     image: mongo
+    volumes:
+      - edusense-db-data:/data/db
     ports:
-      - "27017:27017"
+      - "27018:27017"
     networks:
       - edusense_backend
+      - connector
+
+  storage_dev:
+    build: ../storage
+    command: ["-db", "edusense", "-dbhost", "mongo_dev", "-port", "5001"]
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongo_dev
+    networks:
+      - edusense_frontend_dev
+      - edusense_backend_dev
+    secrets:
+      - ssl_cert
+      - ssl_cert_private_key
+      - app_username
+      - app_password
+  mongo_dev:
+    image: mongo
+    volumes:
+      - edusense-db-data-dev:/data/db
+    ports:
+      - "27019:27017"
+    networks:
+      - edusense_backend_dev
+      - connector
 networks:
   edusense_frontend:
     driver: bridge
@@ -31,12 +59,27 @@ networks:
   edusense_backend:
     driver: bridge
     internal: true
+
+  edusense_frontend_dev:
+    driver: bridge
+    internal: false
+  edusense_backend_dev:
+    driver: bridge
+    internal: true
+  connector:
+    driver: bridge
+    internal: false
 secrets:
   ssl_cert:
-    file: <path_to_fullchain.pem: e.g. /etc/letsencrypt/live/<hostname>/fullchain.pem>
+    file: /run/secrets/ssl_cert
   ssl_cert_private_key:
-    file: <path_to_privkeypem: e.g. /etc/letsencrypt/live/<hostname>/privkey.pem>
+    file: /run/secrets/ssl_cert_private_key
   app_username:
-    file: <path_to_app_username_file>
+    file: /run/secrets/app_username
   app_password:
-    file: <path_to_app_password_file>
+    file: /run/secrets/app_password
+
+
+volumes:
+  edusense-db-data:
+  edusense-db-data-dev:

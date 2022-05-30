@@ -120,7 +120,7 @@ func (s *SessionResolver) VideoFrames(ctx context.Context, args FrameArgs) ([]*V
 		}
 	}
 
-	frames, err := s.Driver.GetQueriableVideoFrameByFilter(s.Session.ID, args.Schema+"-video", args.Channel, numberFilters, timestampFilters)
+	frames, err := s.Driver.GetQueriableVideoFrameByFilter(s.Session.ID, args.Schema, args.Channel, numberFilters, timestampFilters)
 
 	if err != nil {
 		return []*VideoFrameResolver{}, err
@@ -162,7 +162,7 @@ func (s *SessionResolver) AudioFrames(ctx context.Context, args FrameArgs) ([]*A
 		}
 	}
 
-	frames, err := s.Driver.GetQueriableAudioFrameByFilter(s.Session.ID, args.Schema+"-audio", args.Channel, numberFilters, timestampFilters)
+	frames, err := s.Driver.GetQueriableAudioFrameByFilter(s.Session.ID, args.Schema, args.Channel, numberFilters, timestampFilters)
 
 	if err != nil {
 		return []*AudioFrameResolver{}, nil

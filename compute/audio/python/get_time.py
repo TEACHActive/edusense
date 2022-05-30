@@ -1,7 +1,7 @@
 import cv2
 import re
 import pytz
-import pytesseract
+# import pytesseract
 from datetime import datetime,timedelta
 
 
@@ -109,7 +109,7 @@ def extract_date(video):
 
 def extract_time(video,logger):
      
-   print(pytesseract.get_tesseract_version())
+#    print(pytesseract.get_tesseract_version())
    threshold_error=timedelta(hours=1,minutes=0)
    ocr_time_failed=False;
    file_time_failed=False;
@@ -130,10 +130,12 @@ def extract_time(video,logger):
    try:
       video_object=cv2.VideoCapture(video)
       print(video)
-      ret,frame=video_object.read()
-      print(ret)
-      ocr_time_stamp=get_timestamp(frame)
-      ocr_date,ocr_time=clean_OCR_Time(ocr_time_stamp)
+      fps = video_object.get(cv2.CAP_PROP_FPS)
+      return (fps,default_date,default_time)
+    #   ret,frame=video_object.read()
+    #   print(ret)
+    #   ocr_time_stamp=get_timestamp(frame)
+    #   ocr_date,ocr_time=clean_OCR_Time(ocr_time_stamp)
    except Exception as e:
        logger.info(video+"ERROR in extracting the date-time from the OCR")
        logger.info(str(e))

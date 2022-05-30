@@ -61,6 +61,11 @@ def wait_container(container):
         stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
 
+        err=stderr.decode('utf-8')
+        out=stdout.decode('utf-8')
+        print(err)
+        print(out)
+
         process = subprocess.Popen([ 
         'docker', 'inspect', container, "--format='{{.State.ExitCode}}'"],
         stdout=subprocess.PIPE,
@@ -72,6 +77,8 @@ def wait_container(container):
         ## acquire a lock
         lock.acquire()
         print(container_dict[container],"exited with status code",status)
+        if(stderr):
+            print(container_dict[container],"exited with error",stderr)
         ## remove the container from global list and dict 
         ## in a thread-safe way
         containers.remove(container)
@@ -123,6 +130,13 @@ if __name__ == '__main__':
                         default='-1', help='tensorflow gpus')
     parser.add_argument('--overwrite', dest='overwrite', type=str, nargs='?', default='False',
                         help='To enable overwriting previous backfilled session, enter: True')
+
+    parser.add_argument('--file_output_dir', dest='file_output_dir', type=str, nargs='?',
+        required=False, help='')
+    parser.add_argument('--video_out', dest='video_out', type=str, nargs='?',
+        required=False, help='')
+    parser.add_argument('--image_out', dest='image_out', type=str, nargs='?',
+        required=False, help='')
     args = parser.parse_args()
 
     uid, gid, app_username, app_password, version, developer = get_parameters(sys.argv[0]) 
@@ -155,6 +169,14 @@ if __name__ == '__main__':
     real_time_flag = ['--process_real_time'] if args.process_real_time \
                     else []
 
+    rest_flags = []
+    if args.image_out:
+        rest_flags.append('--image_out')
+    if args.file_output_dir:
+        rest_flags.extend(['--file_output_dir', args.file_output_dir])
+    if args.video_out:
+        rest_flags.extend(['--video_out', args.video_out])
+
     # create temp directory
     with tempfile.TemporaryDirectory() as tmp_dir:
         if args.log_dir == None:
@@ -179,10 +201,13 @@ if __name__ == '__main__':
             '--gaze_3d',
             '--process_gaze',
             '--profile',
-            '--time_duration', str(args.time_duration + 60) if args.time_duration >= 0 else '-1'] + real_time_flag,
+            '--time_duration', str(args.time_duration + 60) if args.time_duration >= 0 else '-1'] + real_time_flag + rest_flags,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
+
+        if(stderr):
+            print(stderr.decode('utf-8'))
         
         front_video_container_id = stdout.decode('utf-8').strip()
         containers.append(front_video_container_id)
@@ -209,17 +234,20 @@ if __name__ == '__main__':
             '--gaze_3d',
             '--process_gaze',
             '--profile',
-            '--instructor'] + real_time_flag,
+            '--instructor'] + real_time_flag + rest_flags,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
+
+        if(stderr):
+            print(stderr.decode('utf-8'))
 
         back_video_container_id = stdout.decode('utf-8').strip()
         containers.append(back_video_container_id)
         container_dict[back_video_container_id]='back video container'
         print('created back video container', back_video_container_id)
 
-        time.sleep(30)
+        time.sleep(5)
 
         process = subprocess.Popen([
             'nvidia-docker', 'run', '-d',
@@ -238,6 +266,10 @@ if __name__ == '__main__':
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
+
+        if(stderr):
+            print(stderr.decode('utf-8'))
+
         front_openpose_container_id = stdout.decode('utf-8').strip()
         containers.append(front_openpose_container_id)
         container_dict[front_openpose_container_id]='front openpose container'
@@ -260,6 +292,10 @@ if __name__ == '__main__':
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
+
+        if(stderr):
+            print(stderr.decode('utf-8'))
+
         back_openpose_container_id = stdout.decode('utf-8').strip()
         containers.append(back_openpose_container_id)
         container_dict[back_openpose_container_id]='back openpose container'
@@ -282,6 +318,10 @@ if __name__ == '__main__':
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
+
+        if(stderr):
+            print(stderr.decode('utf-8'))
+        
         audio_container_id = stdout.decode('utf-8').strip()
         containers.append(audio_container_id)
         container_dict[audio_container_id]='audio container'

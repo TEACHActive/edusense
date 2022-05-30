@@ -1,0 +1,134 @@
+#!/bin/bash
+
+#Set defaults
+
+#1 Video dir
+VideoDir='/home/jkelley/TEACHActive_Videos/'
+#2 FIREBASE_UID of Prof
+FIREBASE_UID=''
+#3 Camera num Front
+CameraNumFront=''
+#4 Camera num Back
+CameraNumBack=''
+#5 Duration #00:50:00
+Duration='00:50:00'
+#6 Classroom Name
+ClassroomName=''
+#7 Email
+Email='jkelley@iastate.edu'
+#8,9,10,11 Instructor Area for back camera
+X1=''
+Y1=''
+Width=''
+Height=''
+PODIUM_POS_LEFT=''
+PODIUM_POS_RIGHT=''
+
+SENDGRID_API_KEY='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'
+FROM_EMAIL="jkelley@iastate.edu"
+
+# ex. ./test \
+# -v /home/jkelley/TEACHActive_Videos/ \
+# -u hrUBw7QuYzS5jRdUmHzPFRwABwi2 \
+# -f 5 \
+# -b 6 \
+# -d 00:50:00 \
+# -n SICTR-0114 \
+# -e jkelley@iastate.edu \
+# -x 815 \
+# -y 0 \
+# -w 1935 \
+# -h 740
+
+print_usage() {
+  printf "Usage: ..."
+}
+
+while getopts 'v:u:f:b:d:n:e:x:y:w:h:l:r:' flag; do
+  case "${flag}" in
+    v) VideoDir="${OPTARG}" ;;
+    u) FIREBASE_UID="${OPTARG}" ;;
+    f) CameraNumFront="${OPTARG}" ;;
+    b) CameraNumBack="${OPTARG}" ;;
+    d) Duration="${OPTARG}" ;;
+    n) ClassroomName="${OPTARG}" ;;
+    e) Email="${OPTARG}" ;;
+    x) X1="${OPTARG}" ;;
+    y) Y1="${OPTARG}" ;;
+    w) Width="${OPTARG}" ;;
+    h) Height="${OPTARG}" ;;
+    l) PODIUM_POS_LEFT="${OPTARG}" ;;
+    r) PODIUM_POS_RIGHT="${OPTARG}" ;;
+    *) print_usage
+       exit 1 ;;
+  esac
+done
+
+# =======================================================================
+
+folder_path=$VideoDir$ClassroomName/$FIREBASE_UID
+
+mkdir -p $folder_path
+
+# Front Record
+front_video_name="$ClassroomName"_"$FIREBASE_UID"_`date +%y-%m-%d_%s`--Front.mp4
+ffmpeg -i rtsp://admin:Screen_lamp_snow@amcrest-cam"$CameraNumFront".its.iastate.edu/ -acodec copy -vcodec copy -t "$5" "$folder_path/$front_video_name" &
+
+# Back Record
+back_video_name="$ClassroomName"_"$FIREBASE_UID"_`date +%y-%m-%d_%s`--Back.mp4
+ffmpeg -i rtsp://admin:Screen_lamp_snow@amcrest-cam"$CameraNumBack".its.iastate.edu/ -acodec copy -vcodec copy -t "$5" "$folder_path/$back_video_name" &
+
+wait
+
+time_str_front="`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $folder_path/$back_video_name`"
+
+time_front="`printf "%.0f" $time_str_front`"
+
+# Trim instrctor video
+ffmpeg -i "$folder_path/$back_video_name" -filter:v "crop=$Width:$Height:$X1:$X2" -c:a copy "$folder_path/cropped--$back_video_name"
+
+APP_USERNAME=edusense APP_PASSWORD=5i6iJ%rrudSQS36LKs6U python3 /home/jkelley/edusense3/edusense/scripts/run_backfill.py \
+--front_video "$front_video_name" \
+--developer jkelley \
+--back_video "cropped--$back_video_name" \
+--keyword "$FIREBASE_UID" \
+--front_num_gpu_start 0 \
+--front_num_gpu 1 \
+--back_num_gpu_start 1 \
+--back_num_gpu 1 \
+--time_duration $time_front \
+--video_schema 0.1.0 \
+--audio_schema 0.1.0 \
+--video_dir  "$folder_path" \
+--backend_url teachactive.engineering.iastate.edu:5000 \
+--log_dir /home/jkelley/edusense3/edusense/logs \
+--process_real_time \
+--image_out \
+--json_out \
+--out_dir /home/jkelley/analysis_test
+
+
+curl --request POST \
+  --url https://api.sendgrid.com/v3/mail/send \
+  --header "Authorization: Bearer $SENDGRID_API_KEY" \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "personalizations": [
+      {
+        "to": [
+          {
+            "email": "'"$EMAIL"'"
+          }
+        ]
+      }
+    ],
+    "from": {
+      "email": "jkelley@iastate.edu"
+    },
+    "subject": "Your latest TEACHActive session analysis is ready!",
+    "content": [
+      {
+        "type": "text/plain", 
+        "value": "View your latest TEACHActive session at https://teachactive.engineering.iastate.edu"
+      }
+    ]}'
